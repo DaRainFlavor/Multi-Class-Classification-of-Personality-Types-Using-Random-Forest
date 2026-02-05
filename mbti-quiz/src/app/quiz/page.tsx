@@ -143,8 +143,21 @@ export default function QuizPage() {
             });
 
             if (!response.ok) {
-                const errData = (await response.json().catch(() => ({}))) as { error?: string };
-                throw new Error(errData.error || "Failed to get prediction");
+                const status = response.status;
+                const statusText = response.statusText;
+                const responseText = await response.text();
+
+                // Try to parse as JSON if possible to get "error" field
+                try {
+                    const jsonErr = JSON.parse(responseText);
+                    if (jsonErr.error) {
+                        throw new Error(jsonErr.error);
+                    }
+                } catch (e) {
+                    // Ignore json parse error, use raw text
+                }
+
+                throw new Error(`Status: ${status} ${statusText}\nResponse: ${responseText.slice(0, 200)}`);
             }
 
             const data = await response.json();
@@ -153,7 +166,7 @@ export default function QuizPage() {
         } catch (error) {
             console.error("Error submitting quiz:", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            alert(`Failed to submit quiz: ${errorMessage}`);
+            alert(`Failed to submit quiz:\n${errorMessage}`);
             setIsSubmitting(false);
         }
     };
@@ -211,7 +224,7 @@ export default function QuizPage() {
                     </div>
                     <div className="text-xs md:text-sm text-[#C4A52D] font-bold flex flex-col items-end">
                         <span>{answeredCount}/{questions.length} Answered</span>
-                        <span className="text-[10px] text-white/50 font-normal">v1.1</span>
+                        <span className="text-[10px] text-white/50 font-normal">v1.2-debug</span>
                     </div>
                 </div>
             </header>
