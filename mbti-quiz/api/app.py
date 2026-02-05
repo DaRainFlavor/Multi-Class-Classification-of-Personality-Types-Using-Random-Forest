@@ -5,31 +5,36 @@ Uses trained XGBoost model to predict personality types from quiz answers
 
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-import joblib
+import json
 import numpy as np
 import os
+import joblib
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend requests
 
 # Load the model and label encoder
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'xgb_model.joblib')
-ENCODER_PATH = os.path.join(os.path.dirname(__file__), 'label_encoder.joblib')
+LABELS_PATH = os.path.join(os.path.dirname(__file__), 'labels.json')
 
 model = None
-label_encoder = None
+class_labels = None
 
 def load_model():
-    global model, label_encoder
+    global model, class_labels
     try:
         model = joblib.load(MODEL_PATH)
-        label_encoder = joblib.load(ENCODER_PATH)
-        print("Model and encoder loaded successfully!")
-        print(f"Classes: {label_encoder.classes_}")
+        with open(LABELS_PATH, 'r') as f:
+            class_labels = json.load(f)
+        print("Model and labels loaded successfully!")
+        print(f"Classes: {class_labels}")
     except FileNotFoundError:
-        print("Model not found! Run train_model.py first.")
+        print("Model or labels not found!")
         print(f"Expected model at: {MODEL_PATH}")
-        print(f"Expected encoder at: {ENCODER_PATH}")
+        print(f"Expected labels at: {LABELS_PATH}")
+
+# Load model immediately when module is imported
+load_model()
 
 
 @app.route('/health', methods=['GET'])
@@ -44,9 +49,9 @@ def health_check():
 @app.route('/predict', methods=['POST'])
 def predict():
     """Predict MBTI personality type from quiz answers"""
-    if model is None or label_encoder is None:
+    if model is None or class_labels is None:
         return jsonify({
-            'error': 'Model not loaded. Run train_model.py first.'
+            'error': 'Model not loaded.'
         }), 500
 
     try:
@@ -66,12 +71,13 @@ def predict():
         probabilities = model.predict_proba(X)[0]
 
         # Decode predicted class
-        predicted_type = label_encoder.inverse_transform([prediction])[0]
+        # simple index lookup since we have a list of strings
+        predicted_type = class_labels[int(prediction)]
 
         # Create probabilities dictionary
         prob_dict = {
-            label_encoder.classes_[i]: float(probabilities[i])
-            for i in range(len(label_encoder.classes_))
+            class_labels[i]: float(probabilities[i])
+            for i in range(len(class_labels))
         }
 
         # Get confidence (max probability)
@@ -92,19 +98,20 @@ def predict():
 @app.route('/types', methods=['GET'])
 def get_types():
     """Get all possible personality types"""
-    if label_encoder is None:
+    if class_labels is None:
+        # Fallback if not loaded, though load_model() is called at module level
         return jsonify({
             'types': ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP',
                      'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP']
         })
     
     return jsonify({
-        'types': list(label_encoder.classes_)
+        'types': class_labels
     })
 
 
 if __name__ == '__main__':
-    load_model()
+    # load_model() is already called at module level
     print("\n" + "="*50)
     print("MBTI Prediction API")
     print("="*50)
