@@ -224,7 +224,7 @@ export default function QuizPage() {
                     </div>
                     <div className="text-xs md:text-sm text-[#C4A52D] font-bold flex flex-col items-end">
                         <span>{answeredCount}/{questions.length} Answered</span>
-                        <span className="text-[10px] text-white/50 font-normal">v1.2-debug</span>
+                        <span className="text-[10px] text-white/50 font-normal">v1.3-fix</span>
                     </div>
                 </div>
             </header>
