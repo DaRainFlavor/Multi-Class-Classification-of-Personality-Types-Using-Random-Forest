@@ -1,6 +1,7 @@
 """
 Flask API for MBTI Personality Type Prediction
-Uses trained XGBoost model to predict personality types from quiz answers
+Uses trained ONNX model to predict personality types from quiz answers
+Updated for Vercel deployment
 """
 
 from flask import Flask, request, jsonify
